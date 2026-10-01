@@ -26,14 +26,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21 (Required for Android SDK 36 & Robolectric)
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
-      - name: Setup Gradle with Caching
+      - name: Setup Gradle 9.3.1 with Caching
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
 
       - name: Ensure Debug & Release Keystores Exist
         env:
@@ -70,7 +72,7 @@ jobs:
             echo "KEY_PASSWORD=paysync123" >> $GITHUB_ENV
           fi
 
-      - name: Run Unit Tests
+      - name: Run Unit & Robolectric Tests
         run: gradle :app:testDebugUnitTest
 
       - name: Build Signed Release APK, Release AAB & Debug APK

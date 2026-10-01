@@ -24,15 +24,15 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 data class MfsWebhookPayload(
-    @Json(name = "trx_id") val trxId: String,
-    @Json(name = "sender_number") val senderNumber: String,
-    @Json(name = "amount") val amount: Double,
-    @Json(name = "mfs_provider") val mfsProvider: String,
-    @Json(name = "secret_key") val secretKey: String,
-    @Json(name = "transaction_type") val transactionType: String = "Send Money",
-    @Json(name = "matched_order_id") val matchedOrderId: String? = null,
-    @Json(name = "verification_status") val verificationStatus: String = "VERIFIED",
-    @Json(name = "timestamp") val timestamp: Long = System.currentTimeMillis()
+    @param:Json(name = "trx_id") @get:Json(name = "trx_id") val trxId: String,
+    @param:Json(name = "sender_number") @get:Json(name = "sender_number") val senderNumber: String,
+    @param:Json(name = "amount") @get:Json(name = "amount") val amount: Double,
+    @param:Json(name = "mfs_provider") @get:Json(name = "mfs_provider") val mfsProvider: String,
+    @param:Json(name = "secret_key") @get:Json(name = "secret_key") val secretKey: String,
+    @param:Json(name = "transaction_type") @get:Json(name = "transaction_type") val transactionType: String = "Send Money",
+    @param:Json(name = "matched_order_id") @get:Json(name = "matched_order_id") val matchedOrderId: String? = null,
+    @param:Json(name = "verification_status") @get:Json(name = "verification_status") val verificationStatus: String = "VERIFIED",
+    @param:Json(name = "timestamp") @get:Json(name = "timestamp") val timestamp: Long = System.currentTimeMillis()
 )
 
 interface DynamicWebhookRetrofitApi {
