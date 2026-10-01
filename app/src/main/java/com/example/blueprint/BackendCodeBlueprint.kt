@@ -372,6 +372,93 @@ exports.mfsPaymentGateway = onRequest({ region: "asia-southeast1" }, app);
   }
 }
             """.trimIndent()
+        ),
+        BlueprintSection(
+            id = "github_actions_auto_release",
+            title = "4. GitHub Actions Auto-Release CI/CD (.github/workflows/android-release.yml)",
+            subtitle = "Automatically runs tests, signs Release APK & AAB, and publishes a GitHub Release on every push to main or v* tag",
+            language = "yaml",
+            fileName = ".github/workflows/android-release.yml",
+            code = """
+name: Android Auto Build & GitHub Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ "v*.*.*" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Signing Keystore (Secrets or Auto-Generated Fallback)
+        env:
+          KEYSTORE_BASE64: ${"$"}{{ secrets.KEYSTORE_BASE64 }}
+          SECRET_STORE_PASSWORD: ${"$"}{{ secrets.STORE_PASSWORD }}
+          SECRET_KEY_PASSWORD: ${"$"}{{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          if [ -n "${"$"}KEYSTORE_BASE64" ]; then
+            echo "${"$"}KEYSTORE_BASE64" | base64 --decode > "${"$"}{GITHUB_WORKSPACE}/my-upload-key.jks"
+            echo "KEYSTORE_PATH=${"$"}{GITHUB_WORKSPACE}/my-upload-key.jks" >> ${"$"}GITHUB_ENV
+            echo "STORE_PASSWORD=${"$"}{SECRET_STORE_PASSWORD}" >> ${"$"}GITHUB_ENV
+            echo "KEY_PASSWORD=${"$"}{SECRET_KEY_PASSWORD}" >> ${"$"}GITHUB_ENV
+          else
+            keytool -genkeypair -v -keystore "${"$"}{GITHUB_WORKSPACE}/my-upload-key.jks" -alias upload \
+              -keyalg RSA -keysize 2048 -validity 10000 -storepass paysync123 -keypass paysync123 \
+              -dname "CN=PaySync MFS,OU=Gateway,O=PaySync,L=Dhaka,S=Dhaka,C=BD"
+            echo "KEYSTORE_PATH=${"$"}{GITHUB_WORKSPACE}/my-upload-key.jks" >> ${"$"}GITHUB_ENV
+            echo "STORE_PASSWORD=paysync123" >> ${"$"}GITHUB_ENV
+            echo "KEY_PASSWORD=paysync123" >> ${"$"}GITHUB_ENV
+          fi
+
+      - name: Run Unit Tests & Build Release APK/AAB
+        run: gradle :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease :app:assembleDebug
+
+      - name: Prepare Release Assets
+        id: prep_release
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/*.apk release-assets/PaySync-MFS-release.apk
+          cp app/build/outputs/apk/debug/*.apk release-assets/PaySync-MFS-debug.apk
+          cp app/build/outputs/bundle/release/*.aab release-assets/PaySync-MFS-release.aab
+          TAG_NAME="v1.0.${"$"}{GITHUB_RUN_NUMBER}"
+          if [[ "${"$"}{GITHUB_REF}" == refs/tags/* ]]; then
+            TAG_NAME="${"$"}{GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag_name=${"$"}TAG_NAME" >> ${"$"}GITHUB_OUTPUT
+
+      - name: Publish Automated GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${"$"}{{ steps.prep_release.outputs.tag_name }}
+          name: "PaySync MFS ${"$"}{{ steps.prep_release.outputs.tag_name }}"
+          generate_release_notes: true
+          files: |
+            release-assets/PaySync-MFS-release.apk
+            release-assets/PaySync-MFS-debug.apk
+            release-assets/PaySync-MFS-release.aab
+            """.trimIndent()
         )
     )
 }

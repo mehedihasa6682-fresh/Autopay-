@@ -1,0 +1,119 @@
+name: Android Auto Build & GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Custom release tag (e.g. v1.0.0)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Signed APK/AAB & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle with Caching
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Ensure Debug & Release Keystores Exist
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SECRET_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          SECRET_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Ensure debug.keystore exists for debugConfig
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # 2. Decode user's production keystore if configured in GitHub Secrets,
+          #    otherwise auto-generate a valid release keystore with alias 'upload'
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/my-upload-key.jks"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${SECRET_STORE_PASSWORD}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${SECRET_KEY_PASSWORD}" >> $GITHUB_ENV
+          else
+            keytool -genkeypair -v \
+              -keystore "${GITHUB_WORKSPACE}/my-upload-key.jks" \
+              -alias upload \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass paysync123 -keypass paysync123 \
+              -dname "CN=PaySync MFS,OU=Gateway,O=PaySync,L=Dhaka,S=Dhaka,C=BD"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=paysync123" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=paysync123" >> $GITHUB_ENV
+          fi
+
+      - name: Run Unit Tests
+        run: gradle :app:testDebugUnitTest
+
+      - name: Build Signed Release APK, Release AAB & Debug APK
+        run: gradle :app:assembleRelease :app:bundleRelease :app:assembleDebug
+
+      - name: Prepare Release Artifacts
+        id: prep_release
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/*.apk release-assets/PaySync-MFS-release.apk
+          cp app/build/outputs/apk/debug/*.apk release-assets/PaySync-MFS-debug.apk
+          cp app/build/outputs/bundle/release/*.aab release-assets/PaySync-MFS-release.aab
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          elif [ -n "${{ github.event.inputs.release_tag }}" ]; then
+            TAG_NAME="${{ github.event.inputs.release_tag }}"
+          else
+            TAG_NAME="v1.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload Build Artifacts to Workflow Run
+        uses: actions/upload-artifact@v4
+        with:
+          name: PaySync-MFS-Build-${{ steps.prep_release.outputs.tag_name }}
+          path: |
+            release-assets/PaySync-MFS-release.apk
+            release-assets/PaySync-MFS-debug.apk
+            release-assets/PaySync-MFS-release.aab
+
+      - name: Create Automated GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prep_release.outputs.tag_name }}
+          name: "PaySync MFS ${{ steps.prep_release.outputs.tag_name }}"
+          generate_release_notes: true
+          body: |
+            ## PaySync MFS Automated Release (${{ steps.prep_release.outputs.tag_name }})
+            - **PaySync-MFS-release.apk**: Signed production APK ready for installation on your bKash/Nagad gateway Android device.
+            - **PaySync-MFS-release.aab**: Signed Android App Bundle for Play Store distribution.
+            - **PaySync-MFS-debug.apk**: Debug APK for testing and inspection.
+          files: |
+            release-assets/PaySync-MFS-release.apk
+            release-assets/PaySync-MFS-debug.apk
+            release-assets/PaySync-MFS-release.aab
