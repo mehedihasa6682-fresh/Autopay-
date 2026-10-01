@@ -1,0 +1,6 @@
+{
+  "name": "PaySync MFS",
+  "description": "Automated bKash & Nagad MFS Payment Verification Gateway, SMS & Notification Regex Parser, Dynamic Amount Concurrency Engine, and Firebase Realtime DB + Cloud Functions Architecture",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
