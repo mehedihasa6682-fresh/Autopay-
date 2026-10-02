@@ -21,8 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.LockClock
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,7 +31,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,9 +63,9 @@ fun SessionsConcurrencyScreen(
     onSpawn20ConcurrentSessions: (Double, String) -> Unit,
     onSimulateInstantMatch: (PaymentSessionEntity) -> Unit
 ) {
-    var customerName by remember { mutableStateOf("Rahim Uddin") }
     var customerPhone by remember { mutableStateOf("01715889900") }
     var baseAmountText by remember { mutableStateOf("500") }
+    var customerName by remember { mutableStateOf("") }
     var selectedProvider by remember { mutableStateOf("bKash") }
     var statusFilter by remember { mutableStateOf("ALL") }
 
@@ -89,7 +87,7 @@ fun SessionsConcurrencyScreen(
     ) {
         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-        // 1. Dynamic Amount Session Generator & 20-User Concurrency Stress-Tester
+        // ১. শুধু সেন্ডার নাম্বার যোগ করার সহজ বক্স
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -99,18 +97,18 @@ fun SessionsConcurrencyScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.LockClock,
-                            contentDescription = "Dynamic Amount Lock",
+                            imageVector = Icons.Default.PhoneAndroid,
+                            contentDescription = "Sender Number",
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "Initiate Payment Session (Dynamic Amount)",
+                                text = "কাস্টমারের সেন্ডার নাম্বার যোগ করুন",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Mode: ${config.dynamicAmountMode.label} • ${config.sessionTtlMinutes}m Countdown Lock",
+                                text = "সাইটে কাস্টমার যে নাম্বার দিয়েছে সেটি দিন — ওই নাম্বার থেকে টাকা আসলেই অটো ভেরিফাই হবে",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -139,89 +137,65 @@ fun SessionsConcurrencyScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    OutlinedTextField(
+                        value = customerPhone,
+                        onValueChange = { customerPhone = it },
+                        label = { Text("কাস্টমারের সেন্ডার নাম্বার (যেমন: 01715889900)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_session_customer_phone")
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
+                            value = baseAmountText,
+                            onValueChange = { baseAmountText = it },
+                            label = { Text("টাকার পরিমাণ (৳)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("input_session_base_amount")
+                        )
+                        OutlinedTextField(
                             value = customerName,
                             onValueChange = { customerName = it },
-                            label = { Text("Customer Name") },
+                            label = { Text("নাম (ঐচ্ছিক)") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("input_session_customer_name")
                         )
-                        OutlinedTextField(
-                            value = customerPhone,
-                            onValueChange = { customerPhone = it },
-                            label = { Text("Sender Mobile") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("input_session_customer_phone")
-                        )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = baseAmountText,
-                        onValueChange = { baseAmountText = it },
-                        label = { Text("Base Order Amount (৳ BDT)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("input_session_base_amount")
-                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    Button(
+                        onClick = {
+                            val base = baseAmountText.toDoubleOrNull() ?: 500.0
+                            onInitiateSession(customerName, customerPhone, base, selectedProvider)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("btn_initiate_session")
                     ) {
-                        Button(
-                            onClick = {
-                                val base = baseAmountText.toDoubleOrNull() ?: 500.0
-                                onInitiateSession(customerName, customerPhone, base, selectedProvider)
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .testTag("btn_initiate_session")
-                        ) {
-                            Icon(Icons.Default.AddCircle, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Lock Session")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                val base = baseAmountText.toDoubleOrNull() ?: 500.0
-                                onSpawn20ConcurrentSessions(base, selectedProvider)
-                            },
-                            modifier = Modifier
-                                .weight(1.1f)
-                                .height(48.dp)
-                                .testTag("btn_spawn_20_sessions")
-                        ) {
-                            Icon(
-                                Icons.Default.Groups,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("20x Concurrent Burst")
-                        }
+                        Icon(Icons.Default.AddCircle, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("সেন্ডার নাম্বার ভেরিফিকেশনে যুক্ত করুন")
                     }
                 }
             }
         }
 
-        // 2. Filter Row for Payment Sessions
+        // ২. ফিল্টার বাটন
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,36 +204,29 @@ fun SessionsConcurrencyScreen(
             ) {
                 val activeCount = sessions.count { it.status == "ACTIVE" }
                 val matchedCount = sessions.count { it.status == "MATCHED" }
-                val expiredCount = sessions.count { it.status == "EXPIRED" }
 
                 FilterChip(
                     selected = statusFilter == "ALL",
                     onClick = { statusFilter = "ALL" },
-                    label = { Text("All (${sessions.size})") },
+                    label = { Text("সব (${sessions.size})") },
                     modifier = Modifier.testTag("filter_sessions_all")
                 )
                 FilterChip(
                     selected = statusFilter == "ACTIVE",
                     onClick = { statusFilter = "ACTIVE" },
-                    label = { Text("Active ($activeCount)") },
+                    label = { Text("অপেক্ষমান ($activeCount)") },
                     modifier = Modifier.testTag("filter_sessions_active")
                 )
                 FilterChip(
                     selected = statusFilter == "MATCHED",
                     onClick = { statusFilter = "MATCHED" },
-                    label = { Text("Verified ($matchedCount)") },
+                    label = { Text("ভেরিফাইড ($matchedCount)") },
                     modifier = Modifier.testTag("filter_sessions_matched")
-                )
-                FilterChip(
-                    selected = statusFilter == "EXPIRED",
-                    onClick = { statusFilter = "EXPIRED" },
-                    label = { Text("Expired ($expiredCount)") },
-                    modifier = Modifier.testTag("filter_sessions_expired")
                 )
             }
         }
 
-        // 3. Payment Session Cards with Live 5-Minute Countdown Timer
+        // ৩. সেন্ডার নাম্বার কার্ড লিস্ট
         items(filteredSessions, key = { it.sessionId }) { session ->
             PaymentSessionCard(
                 session = session,
@@ -338,11 +305,11 @@ private fun PaymentSessionCard(
                 ) {
                     Text(
                         text = if (session.status == "MATCHED") {
-                            "VERIFIED (${session.matchedTrxId})"
+                            "ভেরিফাইড (TrxID: ${session.matchedTrxId})"
                         } else if (session.status == "ACTIVE") {
-                            String.format(Locale.US, "LOCKED • %02d:%02d", mins, secs)
+                            String.format(Locale.US, "অপেক্ষমান • %02d:%02d", mins, secs)
                         } else {
-                            "EXPIRED"
+                            "সময় শেষ"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = statusColor,
@@ -360,25 +327,26 @@ private fun PaymentSessionCard(
             ) {
                 Column {
                     Text(
-                        text = session.customerName,
-                        style = MaterialTheme.typography.titleMedium
+                        text = "সেন্ডার: ${session.customerPhone}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Sender: ${session.customerPhone}",
+                        text = session.customerName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = FontFamily.Monospace
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Base: ৳${String.format(Locale.US, "%.2f", session.baseAmount)}",
+                        text = "টাকার পরিমাণ",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "৳${String.format(Locale.US, "%.2f", session.lockedAmount)}",
+                        text = "৳${String.format(Locale.US, "%.0f", session.lockedAmount)}",
                         style = MaterialTheme.typography.headlineMedium,
                         color = statusColor,
                         fontFamily = FontFamily.Monospace,
@@ -413,7 +381,7 @@ private fun PaymentSessionCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Unique amount reserved for 5m window",
+                            text = "এই নাম্বার থেকে এসএমএস আসলেই ভেরিফাই হবে",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -433,7 +401,7 @@ private fun PaymentSessionCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Simulate SMS", color = Color.White)
+                        Text("টেস্ট SMS", color = Color.White)
                     }
                 }
             } else if (session.status == "MATCHED") {
@@ -447,7 +415,7 @@ private fun PaymentSessionCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Auto-matched via SMS Regex & synced to Webhook",
+                        text = "সেন্ডার নাম্বার মিলিয়ে অটো ভেরিফাই সম্পন্ন ও ওয়েবসাইটে পাঠানো হয়েছে",
                         style = MaterialTheme.typography.bodyMedium,
                         color = ElectricEmerald
                     )

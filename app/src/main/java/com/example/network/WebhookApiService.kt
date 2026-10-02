@@ -111,16 +111,16 @@ object WebhookNetworkClient {
 
         // Check if user configured a real external endpoint or the default placeholder URL
         val isPlaceholderUrl = webhookUrl.contains("mfs-paysync.cloudfunctions.net") ||
+            webhookUrl.contains("yourwebsite.com") ||
             webhookUrl.contains("example.com")
 
         if (isPlaceholderUrl && !syncToFirebaseRest) {
-            // Local Gateway Verification Engine completed; log the signed Retrofit payload ready for production Cloud Function
-            val elapsed = (System.currentTimeMillis() - startTime).coerceAtLeast(18L)
+            val elapsed = (System.currentTimeMillis() - startTime).coerceAtLeast(15L)
             return@withContext WebhookDispatchResult(
                 isSuccess = true,
                 httpStatus = 200,
                 payloadJson = jsonBody,
-                responseSummary = "200 OK (Local Verification Engine + Signed Payload Ready | HMAC: ${signature.take(12)}...)",
+                responseSummary = "200 OK — অ্যাপের লোকাল ভেরিফিকেশন সম্পন্ন (ওয়েবসাইটে পাঠাতে নিজের সাইটের Webhook URL বসিয়ে সেভ করুন)",
                 latencyMs = elapsed
             )
         }

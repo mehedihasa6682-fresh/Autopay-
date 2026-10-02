@@ -7,7 +7,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,11 +31,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Warning
@@ -103,7 +100,7 @@ fun GatewayHubScreen(
     var senderInput by remember { mutableStateOf("bKash") }
     var smsInput by remember {
         mutableStateOf(
-            "You have received Tk 502.00 from 01819876543. Ref 1. Fee Tk 0.00. Balance Tk 14,250.00. TrxID BKA72M91KL at 01/10/2026 22:20"
+            "You have received Tk 500.00 from 01819876543. Ref 1. Fee Tk 0.00. Balance Tk 14,250.00. TrxID BKA72M91KL at 01/10/2026 22:20"
         )
     }
 
@@ -134,7 +131,7 @@ fun GatewayHubScreen(
     ) {
         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-        // 1. Hero Command Center Banner
+        // ১. উপরের স্ট্যাটাস ব্যানার
         item {
             Card(
                 shape = RoundedCornerShape(22.dp),
@@ -148,17 +145,17 @@ fun GatewayHubScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(190.dp)
+                            .height(195.dp)
                     )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(190.dp)
+                            .height(195.dp)
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        MidnightNavy.copy(alpha = 0.55f),
-                                        MidnightNavy.copy(alpha = 0.94f)
+                                        MidnightNavy.copy(alpha = 0.60f),
+                                        MidnightNavy.copy(alpha = 0.95f)
                                     )
                                 )
                             )
@@ -191,9 +188,9 @@ fun GatewayHubScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = if (permissionState.foregroundServiceRunning) {
-                                        "24/7 GATEWAY DAEMON ONLINE"
+                                        "অটো ভেরিফাই চালু আছে (24/7)"
                                     } else {
-                                        "GATEWAY STANDBY"
+                                        "অটো ভেরিফাই বন্ধ আছে"
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = ElectricEmerald,
@@ -208,17 +205,17 @@ fun GatewayHubScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "bKash & Nagad Automation Engine",
+                            text = "সেন্ডার নাম্বার দিয়ে অটো ভেরিফাই",
                             style = MaterialTheme.typography.headlineMedium,
                             color = Color.White
                         )
                         Text(
-                            text = "Real-time SMS/Notification Regex Parser • Dynamic Amount Locks • Firebase Sync",
+                            text = "কাস্টমার সাইটে শুধু নিজের সেন্ডার নাম্বার দেবে, আর আপনার ফোনে bKash/Nagad SMS আসলেই অটো ভেরিফাই হবে",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.82f)
+                            color = Color.White.copy(alpha = 0.85f)
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -228,20 +225,20 @@ fun GatewayHubScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             KpiPill(
-                                label = "Active Locks",
-                                value = "${activeSessions.size}",
+                                label = "অপেক্ষমান নাম্বার",
+                                value = "${activeSessions.size} টি",
                                 accent = ElectricEmerald,
                                 modifier = Modifier.weight(1f)
                             )
                             KpiPill(
-                                label = "Verified (${verifiedCount})",
+                                label = "মোট ভেরিফাইড ($verifiedCount)",
                                 value = "৳${String.format(Locale.US, "%,.0f", verifiedVolume)}",
                                 accent = BkashPink,
                                 modifier = Modifier.weight(1f)
                             )
                             KpiPill(
-                                label = "Unmatched",
-                                value = "$unclaimedCount",
+                                label = "ম্যানুয়াল লিস্ট",
+                                value = "$unclaimedCount টি",
                                 accent = NagadOrange,
                                 modifier = Modifier.weight(1f)
                             )
@@ -251,7 +248,7 @@ fun GatewayHubScreen(
             }
         }
 
-        // 2. Runtime Permissions & 24/7 Battery Bypass Controls (Prompt 1 Requirements)
+        // ২. ফোনের ৩টি জরুরি পারমিশন (সহজ বাটন)
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -261,29 +258,23 @@ fun GatewayHubScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = "Permissions",
-                                tint = MaterialTheme.colorScheme.primary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = "Permissions",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "অ্যাপ চালু রাখার ৩টি সেটিংস",
+                                style = MaterialTheme.typography.titleMedium
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = "24/7 Background & Runtime Permissions",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = "SMS Receiver, Notification Listener & Battery Doze Bypass",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "ফোন লক থাকলেও ২৪ ঘণ্টা অটো SMS পড়ার জন্য নিচের ৩টি পারমিশন চালু রাখুন",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
@@ -291,14 +282,14 @@ fun GatewayHubScreen(
 
                     PermissionControlRow(
                         icon = Icons.Default.Sms,
-                        title = "SMS Read & Broadcast Receiver",
+                        title = "১. এসএমএস (SMS) পড়ার অনুমতি",
                         subtitle = if (permissionState.smsPermissionGranted) {
-                            "RECEIVE_SMS & READ_SMS granted for bKash/Nagad"
+                            "চালু আছে — bKash ও Nagad এসএমএস অটো রিসিভ হবে"
                         } else {
-                            "Grant runtime SMS permission to intercept bKash/Nagad TrxID"
+                            "অনুমতি দিন যাতে অ্যাপটি bKash/Nagad মেসেজ পড়তে পারে"
                         },
                         isGranted = permissionState.smsPermissionGranted,
-                        actionLabel = if (permissionState.smsPermissionGranted) "Scan Inbox" else "Grant SMS",
+                        actionLabel = if (permissionState.smsPermissionGranted) "ইনবক্স চেক" else "অনুমতি দিন",
                         testTag = "btn_sms_permission",
                         onClick = {
                             if (permissionState.smsPermissionGranted) {
@@ -320,14 +311,14 @@ fun GatewayHubScreen(
 
                     PermissionControlRow(
                         icon = Icons.Default.NotificationsActive,
-                        title = "MFS Notification Listener Service",
+                        title = "২. নোটিফিকেশন পড়ার অনুমতি",
                         subtitle = if (permissionState.notificationListenerEnabled) {
-                            "Listening for bKash & Nagad app push notifications"
+                            "চালু আছে — অ্যাপের নোটিফিকেশন থেকেও ভেরিফাই হবে"
                         } else {
-                            "Enable Notification Listener for instant push verification"
+                            "bKash ও Nagad অ্যাপের নোটিফিকেশন পড়ার জন্য চালু করুন"
                         },
                         isGranted = permissionState.notificationListenerEnabled,
-                        actionLabel = if (permissionState.notificationListenerEnabled) "Configured" else "Enable",
+                        actionLabel = if (permissionState.notificationListenerEnabled) "চালু আছে" else "চালু করুন",
                         testTag = "btn_notification_listener",
                         onClick = {
                             runCatching {
@@ -341,14 +332,14 @@ fun GatewayHubScreen(
 
                     PermissionControlRow(
                         icon = Icons.Default.BatteryChargingFull,
-                        title = "Battery Optimization Bypass (24/7 Uptime)",
+                        title = "৩. ব্যাটারি সেভার বন্ধ (২৪/৭ ব্যাকগ্রাউন্ড)",
                         subtitle = if (permissionState.batteryOptimizationIgnored) {
-                            "Unrestricted background execution active (Doze bypassed)"
+                            "চালু আছে — ব্যাকগ্রাউন্ডে অ্যাপ কখনো বন্ধ হবে না"
                         } else {
-                            "Whitelist app from Android OS battery optimization"
+                            "অ্যান্ড্রয়েড যেন ব্যাকগ্রাউন্ডে অ্যাপ বন্ধ না করে তার জন্য চালু করুন"
                         },
                         isGranted = permissionState.batteryOptimizationIgnored,
-                        actionLabel = if (permissionState.batteryOptimizationIgnored) "Active" else "Bypass Doze",
+                        actionLabel = if (permissionState.batteryOptimizationIgnored) "ঠিক আছে" else "সেট করুন",
                         testTag = "btn_battery_bypass",
                         onClick = {
                             runCatching {
@@ -370,7 +361,7 @@ fun GatewayHubScreen(
             }
         }
 
-        // 3. Interactive SMS Regex Parser & Webhook Simulator Lab
+        // ৩. এসএমএস টেস্ট বক্স (সহজ বাংলায়)
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -382,18 +373,18 @@ fun GatewayHubScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Radar,
-                            contentDescription = "Regex Lab",
+                            imageVector = Icons.Default.Sms,
+                            contentDescription = "SMS Test",
                             tint = MaterialTheme.colorScheme.secondary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "Live SMS Regex Parser & Webhook Injector",
+                                text = "এসএমএস (SMS) ভেরিফিকেশন টেস্ট করুন",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Test bKash/Nagad Regex extraction & trigger the Verification Engine",
+                                text = "নিচের বাটনে ক্লিক করে দেখুন অ্যাপ কীভাবে মেসেজ থেকে সেন্ডার নাম্বার বের করে ভেরিফাই করে",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -402,7 +393,6 @@ fun GatewayHubScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Preset chips for rapid testing
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -429,13 +419,13 @@ fun GatewayHubScreen(
                                     senderInput = "bKash"
                                     smsInput = MfsSmsParser.buildSampleSms(
                                         provider = "bKash",
-                                        amount = 501.00,
+                                        amount = 500.00,
                                         senderNumber = "01712345678",
                                         trxId = "BKA55N82QP"
                                     )
                                 }
                             },
-                            label = { Text("Match Active Session") },
+                            label = { Text("অপেক্ষমান নাম্বারের টেস্ট SMS") },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Bolt,
@@ -453,9 +443,9 @@ fun GatewayHubScreen(
                             onClick = {
                                 senderInput = "bKash"
                                 val trx = "BKC" + (1000000..9999999).random()
-                                smsInput = "Cash In Tk 502.00 from 01819876543 successful. Fee Tk 0.00. Balance Tk 18,420.00. TrxID $trx at 01/10/2026 22:25"
+                                smsInput = "You have received Tk 500.00 from 01819876543. Ref 1. Fee Tk 0.00. Balance Tk 18,420.00. TrxID $trx at 01/10/2026 22:25"
                             },
-                            label = { Text("bKash Cash In") },
+                            label = { Text("bKash মেসেজ") },
                             modifier = Modifier.testTag("chip_preset_bkash")
                         )
 
@@ -463,55 +453,19 @@ fun GatewayHubScreen(
                             onClick = {
                                 senderInput = "Nagad"
                                 val trx = "78N" + (10000..99999).random()
-                                smsInput = "Money Received. Amount: Tk 1001.00. Sender: 01911223344. Ref: Order. TxnID: $trx. Balance: Tk 9,501.00. 01/10/2026 22:30"
+                                smsInput = "Money Received. Amount: Tk 1000.00. Sender: 01911223344. Ref: Order. TxnID: $trx. Balance: Tk 9,500.00. 01/10/2026 22:30"
                             },
-                            label = { Text("Nagad Received") },
+                            label = { Text("Nagad মেসেজ") },
                             modifier = Modifier.testTag("chip_preset_nagad")
-                        )
-
-                        AssistChip(
-                            onClick = {
-                                senderInput = "bKash"
-                                val trx = "BKU" + (1000000..9999999).random()
-                                smsInput = "You have received Tk 499.00 from 01611002233. Ref WrongAmt. Fee Tk 0.00. Balance Tk 15,000.00. TrxID $trx at 01/10/2026 22:31"
-                            },
-                            label = { Text("Unmatched Amount") },
-                            modifier = Modifier.testTag("chip_preset_unmatched")
-                        )
-
-                        AssistChip(
-                            onClick = {
-                                senderInput = "bKash"
-                                smsInput = "You have received Tk 501.00 from 01712345678. Ref 1. Fee Tk 0.00. Balance Tk 12,450.00. TrxID BKA98X72KL at 01/10/2026 22:15"
-                            },
-                            label = { Text("Duplicate TrxID Abuse") },
-                            modifier = Modifier.testTag("chip_preset_duplicate")
                         )
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = senderInput,
-                            onValueChange = { senderInput = it },
-                            label = { Text("Sender ID (bKash/Nagad)") },
-                            singleLine = true,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("input_sms_sender")
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     OutlinedTextField(
                         value = smsInput,
                         onValueChange = { smsInput = it },
-                        label = { Text("Incoming MFS SMS / Notification Payload") },
+                        label = { Text("বিকাশ বা নগদের এসএমএস (SMS)") },
                         minLines = 3,
                         maxLines = 5,
                         modifier = Modifier
@@ -521,10 +475,7 @@ fun GatewayHubScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Live Regex Extraction Preview Box
-                    AnimatedVisibility(visible = true) {
-                        RegexExtractionCard(parsed = liveRegexPreview)
-                    }
+                    RegexExtractionCard(parsed = liveRegexPreview)
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -548,7 +499,7 @@ fun GatewayHubScreen(
                                 contentDescription = null
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Verify & Send Webhook")
+                            Text("সেন্ডার নাম্বার মিলিয়ে ভেরিফাই করুন")
                         }
 
                         if (permissionState.smsPermissionGranted) {
@@ -564,7 +515,7 @@ fun GatewayHubScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Inbox")
+                                Text("ফোনের SMS চেক")
                             }
                         }
                     }
@@ -593,7 +544,7 @@ private fun KpiPill(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.7f)
+            color = Color.White.copy(alpha = 0.75f)
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
@@ -696,7 +647,7 @@ private fun RegexExtractionCard(parsed: ParsedMfsSms?) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Regex Did Not Match: Ensure message contains a valid bKash/Nagad TrxID & Amount (OTP messages are automatically ignored).",
+                    text = "সঠিক bKash বা Nagad পেমেন্ট মেসেজ দিন (OTP মেসেজ অটোমেটিক বাদ দেওয়া হয়)।",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -708,22 +659,14 @@ private fun RegexExtractionCard(parsed: ParsedMfsSms?) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Code,
-                            contentDescription = null,
-                            tint = ElectricEmerald,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "LIVE REGEX PARSED JSON PREVIEW",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ElectricEmerald
-                        )
-                    }
                     Text(
-                        text = "${parsed.mfsProvider} • ${parsed.transactionType}",
+                        text = "মেসেজ থেকে পাওয়া তথ্য:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ElectricEmerald,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${parsed.mfsProvider} (${parsed.transactionType})",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (parsed.mfsProvider == "bKash") BkashPink else NagadOrange,
                         fontWeight = FontWeight.Bold
@@ -735,19 +678,19 @@ private fun RegexExtractionCard(parsed: ParsedMfsSms?) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ParsedFieldChip(
-                        label = "trx_id",
+                        label = "সেন্ডার নাম্বার",
+                        value = parsed.senderNumber,
+                        modifier = Modifier.weight(1.3f)
+                    )
+                    ParsedFieldChip(
+                        label = "টাকার পরিমাণ",
+                        value = "৳${String.format(Locale.US, "%.0f", parsed.amount)}",
+                        modifier = Modifier.weight(1f)
+                    )
+                    ParsedFieldChip(
+                        label = "TrxID",
                         value = parsed.trxId,
                         modifier = Modifier.weight(1f)
-                    )
-                    ParsedFieldChip(
-                        label = "amount",
-                        value = "৳${String.format(Locale.US, "%.2f", parsed.amount)}",
-                        modifier = Modifier.weight(1f)
-                    )
-                    ParsedFieldChip(
-                        label = "sender_number",
-                        value = parsed.senderNumber,
-                        modifier = Modifier.weight(1.2f)
                     )
                 }
             }

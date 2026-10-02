@@ -19,11 +19,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Webhook
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -64,6 +64,7 @@ fun WebhookSettingsScreen(
         ttlMinutes: Int,
         syncToFirebaseRest: Boolean
     ) -> Unit,
+    onTestWebsiteWebhook: () -> Unit,
     onClearLogs: () -> Unit
 ) {
     var webhookUrl by remember(config.webhookUrl) { mutableStateOf(config.webhookUrl) }
@@ -71,7 +72,6 @@ fun WebhookSettingsScreen(
     var secretKey by remember(config.secretKey) { mutableStateOf(config.secretKey) }
     var bkashNumber by remember(config.merchantBkashNumber) { mutableStateOf(config.merchantBkashNumber) }
     var nagadNumber by remember(config.merchantNagadNumber) { mutableStateOf(config.merchantNagadNumber) }
-    var dynamicMode by remember(config.dynamicAmountMode) { mutableStateOf(config.dynamicAmountMode) }
     var syncToFirebase by remember(config.syncToFirebaseRest) { mutableStateOf(config.syncToFirebaseRest) }
 
     LazyColumn(
@@ -83,7 +83,7 @@ fun WebhookSettingsScreen(
     ) {
         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-        // 1. Retrofit Webhook & Firebase Realtime DB Configuration Card
+        // ১. ওয়েবসাইট ও API কানেকশন বক্স
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -94,17 +94,17 @@ fun WebhookSettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.CloudSync,
-                            contentDescription = "Webhook Config",
+                            contentDescription = "Website Connect",
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "Retrofit Webhook & Firebase Endpoint",
+                                text = "অন্য ওয়েবসাইটের সাথে কানেক্ট করুন (Webhook API)",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Dispatches { trx_id, sender_number, amount, mfs_provider, secret_key }",
+                                text = "ফোনে SMS আসলেই অ্যাপ এই লিংকে কাস্টমারের সেন্ডার নাম্বার, টাকার পরিমাণ ও TrxID পাঠিয়ে দেবে",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -116,7 +116,8 @@ fun WebhookSettingsScreen(
                     OutlinedTextField(
                         value = webhookUrl,
                         onValueChange = { webhookUrl = it },
-                        label = { Text("Cloud Function / Webhook API URL") },
+                        label = { Text("আপনার ওয়েবসাইটের Webhook লিংক (URL)") },
+                        placeholder = { Text("https://yoursite.com/api/mfs-webhook.php") },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -126,21 +127,9 @@ fun WebhookSettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
-                        value = firebaseDbUrl,
-                        onValueChange = { firebaseDbUrl = it },
-                        label = { Text("Firebase Realtime Database URL") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("input_firebase_db_url")
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
                         value = secretKey,
                         onValueChange = { secretKey = it },
-                        label = { Text("Webhook Secret Key (HMAC-SHA256 & JSON)") },
+                        label = { Text("Secret Key (ওয়েবসাইটের পাসওয়ার্ড কী)") },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -156,7 +145,7 @@ fun WebhookSettingsScreen(
                         OutlinedTextField(
                             value = bkashNumber,
                             onValueChange = { bkashNumber = it },
-                            label = { Text("Personal bKash No.") },
+                            label = { Text("আপনার bKash নাম্বার") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
@@ -165,7 +154,7 @@ fun WebhookSettingsScreen(
                         OutlinedTextField(
                             value = nagadNumber,
                             onValueChange = { nagadNumber = it },
-                            label = { Text("Personal Nagad No.") },
+                            label = { Text("আপনার Nagad নাম্বার") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
@@ -173,30 +162,17 @@ fun WebhookSettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = "Dynamic Amount Concurrency Strategy:",
-                        style = MaterialTheme.typography.labelLarge
+                    OutlinedTextField(
+                        value = firebaseDbUrl,
+                        onValueChange = { firebaseDbUrl = it },
+                        label = { Text("Firebase Realtime DB লিংক (ঐচ্ছিক)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_firebase_db_url")
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = dynamicMode == DynamicAmountMode.INCREMENTAL_TAKA,
-                            onClick = { dynamicMode = DynamicAmountMode.INCREMENTAL_TAKA },
-                            label = { Text("৳501.00, ৳502.00 (+৳1)") },
-                            modifier = Modifier.testTag("chip_mode_taka")
-                        )
-                        FilterChip(
-                            selected = dynamicMode == DynamicAmountMode.FRACTIONAL_PAISA,
-                            onClick = { dynamicMode = DynamicAmountMode.FRACTIONAL_PAISA },
-                            label = { Text("৳500.01, ৳500.02 (+৳0.01)") },
-                            modifier = Modifier.testTag("chip_mode_paisa")
-                        )
-                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -207,11 +183,11 @@ fun WebhookSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Direct Firebase Realtime DB REST Mirroring",
+                                text = "Firebase ডাটাবেজেও সরাসরি পাঠান",
                                 style = MaterialTheme.typography.labelLarge
                             )
                             Text(
-                                text = "Also PUT verified JSON directly to /webhook_transactions/{trx_id}.json",
+                                text = "চালু করলে ওয়েবসাইটের পাশাপাশি ফায়ারবেজেও অটো সেভ হবে",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -225,33 +201,50 @@ fun WebhookSettingsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Button(
-                        onClick = {
-                            onSaveConfig(
-                                webhookUrl,
-                                firebaseDbUrl,
-                                secretKey,
-                                bkashNumber,
-                                nagadNumber,
-                                dynamicMode,
-                                config.sessionTtlMinutes,
-                                syncToFirebase
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("btn_save_gateway_config")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save Gateway & Webhook Configuration")
+                        Button(
+                            onClick = {
+                                onSaveConfig(
+                                    webhookUrl,
+                                    firebaseDbUrl,
+                                    secretKey,
+                                    bkashNumber,
+                                    nagadNumber,
+                                    DynamicAmountMode.SENDER_NUMBER_ONLY,
+                                    config.sessionTtlMinutes,
+                                    syncToFirebase
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("btn_save_gateway_config")
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("সেভ করুন")
+                        }
+
+                        OutlinedButton(
+                            onClick = onTestWebsiteWebhook,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("btn_test_website_webhook")
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("কানেকশন টেস্ট")
+                        }
                     }
                 }
             }
         }
 
-        // 2. Live Retrofit Webhook Delivery Logs Header
+        // ২. ওয়েবসাইটে পাঠানো ডাটা লগ
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -266,7 +259,7 @@ fun WebhookSettingsScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Retrofit Webhook Dispatch Logs (${webhookLogs.size})",
+                        text = "ওয়েবসাইটে পাঠানো মেসেজের লিস্ট (${webhookLogs.size})",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -284,7 +277,7 @@ fun WebhookSettingsScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Clear")
+                        Text("মুছুন")
                     }
                 }
             }
@@ -322,7 +315,7 @@ private fun WebhookLogCard(log: WebhookLogEntity) {
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "HTTP ${log.httpStatus} (${log.latencyMs}ms)",
+                            text = if (log.isSuccess) "সফল (${log.httpStatus})" else "ত্রুটি (${log.httpStatus})",
                             style = MaterialTheme.typography.labelSmall,
                             color = statusColor,
                             fontWeight = FontWeight.Bold
@@ -330,7 +323,7 @@ private fun WebhookLogCard(log: WebhookLogEntity) {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "${log.mfsProvider} • ${log.trxId}",
+                        text = "সেন্ডার: ${log.senderNumber}",
                         style = MaterialTheme.typography.labelLarge,
                         color = providerColor,
                         fontFamily = FontFamily.Monospace,
@@ -339,7 +332,7 @@ private fun WebhookLogCard(log: WebhookLogEntity) {
                 }
 
                 Text(
-                    text = "৳${String.format(Locale.US, "%.2f", log.amount)}",
+                    text = "৳${String.format(Locale.US, "%.0f", log.amount)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold

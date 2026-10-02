@@ -61,20 +61,15 @@ fun UnmatchedQueueScreen(
     users: List<UserEntity>,
     onClaimManualTrx: (String, String, String) -> Unit
 ) {
-    val unverifiedOrders = remember(orders) {
-        orders.filter { it.status != "VERIFIED" }
-    }
     val unclaimedTransactions = remember(unmatchedList) {
         unmatchedList.filter { it.status == "UNCLAIMED" }
     }
 
-    var orderIdInput by remember(unverifiedOrders) {
-        mutableStateOf(unverifiedOrders.firstOrNull()?.orderId ?: "")
+    var senderPhoneInput by remember(unclaimedTransactions) {
+        mutableStateOf(unclaimedTransactions.firstOrNull()?.senderNumber ?: "")
     }
-    var trxIdInput by remember(unclaimedTransactions) {
-        mutableStateOf(unclaimedTransactions.firstOrNull()?.trxId ?: "")
-    }
-    var senderPhoneInput by remember { mutableStateOf("") }
+    var orderIdInput by remember { mutableStateOf("") }
+    var trxIdInput by remember { mutableStateOf("") }
     var activeTableTab by remember { mutableStateOf("UNMATCHED") }
 
     LazyColumn(
@@ -86,7 +81,7 @@ fun UnmatchedQueueScreen(
     ) {
         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-        // 1. Manual TrxID Claim Engine (Zero Race Condition Reconciliation)
+        // ১. শুধু সেন্ডার নাম্বার দিয়ে ম্যানুয়াল ভেরিফিকেশন বক্স
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -97,17 +92,17 @@ fun UnmatchedQueueScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.VerifiedUser,
-                            contentDescription = "Manual Claim",
+                            contentDescription = "Manual Verify",
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "Manual TrxID Claim & Reconciliation",
+                                text = "সেন্ডার নাম্বার দিয়ে পেমেন্ট ভেরিফাই",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Mutex-locked atomic verification for expired sessions or exact-amount mismatches",
+                                text = "কোনো কাস্টমার আগে টাকা পাঠিয়ে থাকলে শুধু তার সেন্ডার নাম্বার দিয়ে ভেরিফাই করুন",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -116,10 +111,9 @@ fun UnmatchedQueueScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Quick-select chips for Pending Orders & Unclaimed TrxIDs
-                    if (unverifiedOrders.isNotEmpty() || unclaimedTransactions.isNotEmpty()) {
+                    if (unclaimedTransactions.isNotEmpty()) {
                         Text(
-                            text = "Tap to autofill Pending Order or Unclaimed TrxID:",
+                            text = "অপেক্ষমান এসএমএস (ক্লিক করলে নাম্বার বসবে):",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -130,31 +124,32 @@ fun UnmatchedQueueScreen(
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            unverifiedOrders.take(4).forEach { ord ->
+                            unclaimedTransactions.take(5).forEach { tx ->
                                 AssistChip(
                                     onClick = {
-                                        orderIdInput = ord.orderId
-                                        senderPhoneInput = ord.customerPhone
-                                    },
-                                    label = {
-                                        Text("${ord.orderId} (৳${String.format(Locale.US, "%.0f", ord.baseAmount)})")
-                                    }
-                                )
-                            }
-                            unclaimedTransactions.take(4).forEach { tx ->
-                                AssistChip(
-                                    onClick = {
-                                        trxIdInput = tx.trxId
                                         senderPhoneInput = tx.senderNumber
+                                        trxIdInput = tx.trxId
                                     },
                                     label = {
-                                        Text("Trx: ${tx.trxId} (৳${String.format(Locale.US, "%.0f", tx.amount)})")
+                                        Text("${tx.senderNumber} (৳${String.format(Locale.US, "%.0f", tx.amount)})")
                                     }
                                 )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
+
+                    OutlinedTextField(
+                        value = senderPhoneInput,
+                        onValueChange = { senderPhoneInput = it },
+                        label = { Text("কাস্টমারের সেন্ডার নাম্বার (যেমন: 01611556677)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_claim_sender_phone")
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -163,7 +158,7 @@ fun UnmatchedQueueScreen(
                         OutlinedTextField(
                             value = orderIdInput,
                             onValueChange = { orderIdInput = it },
-                            label = { Text("Order ID (e.g. ORD-123456)") },
+                            label = { Text("অর্ডার আইডি (ঐচ্ছিক)") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
@@ -172,25 +167,13 @@ fun UnmatchedQueueScreen(
                         OutlinedTextField(
                             value = trxIdInput,
                             onValueChange = { trxIdInput = it },
-                            label = { Text("MFS TrxID") },
+                            label = { Text("TrxID (ঐচ্ছিক)") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("input_claim_trx_id")
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = senderPhoneInput,
-                        onValueChange = { senderPhoneInput = it },
-                        label = { Text("Sender Mobile Number (Optional verification)") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("input_claim_sender_phone")
-                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -205,13 +188,13 @@ fun UnmatchedQueueScreen(
                     ) {
                         Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Verify & Claim TrxID Atomically")
+                        Text("সেন্ডার নাম্বার দেখে ভেরিফাই করুন")
                     }
                 }
             }
         }
 
-        // 2. Database Tables Explorer Tabs (`unmatched_transactions`, `orders`, `users`)
+        // ২. তালিকা দেখার ৩টি ট্যাব
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -220,7 +203,7 @@ fun UnmatchedQueueScreen(
                 FilterChip(
                     selected = activeTableTab == "UNMATCHED",
                     onClick = { activeTableTab = "UNMATCHED" },
-                    label = { Text("Unmatched (${unmatchedList.size})") },
+                    label = { Text("আনম্যাচড (${unmatchedList.size})") },
                     leadingIcon = {
                         Icon(
                             Icons.Default.PendingActions,
@@ -233,7 +216,7 @@ fun UnmatchedQueueScreen(
                 FilterChip(
                     selected = activeTableTab == "ORDERS",
                     onClick = { activeTableTab = "ORDERS" },
-                    label = { Text("Orders (${orders.size})") },
+                    label = { Text("সব অর্ডার (${orders.size})") },
                     leadingIcon = {
                         Icon(
                             Icons.AutoMirrored.Filled.ReceiptLong,
@@ -246,7 +229,7 @@ fun UnmatchedQueueScreen(
                 FilterChip(
                     selected = activeTableTab == "USERS",
                     onClick = { activeTableTab = "USERS" },
-                    label = { Text("Users (${users.size})") },
+                    label = { Text("কাস্টমার (${users.size})") },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Person,
@@ -265,8 +248,8 @@ fun UnmatchedQueueScreen(
                     UnmatchedTxCard(
                         tx = tx,
                         onSelectForClaim = {
-                            trxIdInput = tx.trxId
                             senderPhoneInput = tx.senderNumber
+                            trxIdInput = tx.trxId
                         }
                     )
                 }
@@ -335,7 +318,7 @@ private fun UnmatchedTxCard(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "TrxID: ${tx.trxId}",
+                        text = "সেন্ডার: ${tx.senderNumber}",
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
@@ -343,7 +326,7 @@ private fun UnmatchedTxCard(
                 }
 
                 Text(
-                    text = "৳${String.format(Locale.US, "%.2f", tx.amount)}",
+                    text = "৳${String.format(Locale.US, "%.0f", tx.amount)}",
                     style = MaterialTheme.typography.titleLarge,
                     color = if (isClaimed) ElectricEmerald else NagadOrange,
                     fontFamily = FontFamily.Monospace,
@@ -354,29 +337,23 @@ private fun UnmatchedTxCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Sender: ${tx.senderNumber} • Reason: ${tx.reason}",
+                text = "TrxID: ${tx.trxId} • ${tx.reason}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isClaimed) {
-                        "CLAIMED BY ${tx.claimedByOrderId}"
-                    } else {
-                        "UNCLAIMED — Tap card to load into Claim Form"
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isClaimed) ElectricEmerald else NagadOrange,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                text = if (isClaimed) {
+                    "ভেরিফাইড (${tx.claimedByOrderId})"
+                } else {
+                    "অপেক্ষমান — ভেরিফাই করতে এই কার্ডে ট্যাপ করুন"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isClaimed) ElectricEmerald else NagadOrange,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -405,7 +382,7 @@ private fun OrderRecordCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = order.orderId,
+                        text = "সেন্ডার: ${order.customerPhone}",
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
@@ -418,12 +395,12 @@ private fun OrderRecordCard(
                     )
                 }
                 Text(
-                    text = "${order.customerName} (${order.customerPhone})",
+                    text = "${order.customerName} (${order.orderId})",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = if (order.trxId != null) "Verified TrxID: ${order.trxId}" else "Awaiting TrxID Match",
+                    text = if (order.trxId != null) "TrxID: ${order.trxId}" else "এসএমএসের অপেক্ষায়",
                     style = MaterialTheme.typography.labelSmall,
                     color = statusColor
                 )
@@ -431,7 +408,7 @@ private fun OrderRecordCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "৳${String.format(Locale.US, "%.2f", order.payableAmount)}",
+                    text = "৳${String.format(Locale.US, "%.0f", order.payableAmount)}",
                     style = MaterialTheme.typography.titleLarge,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
@@ -448,7 +425,7 @@ private fun OrderRecordCard(
                         Spacer(modifier = Modifier.width(4.dp))
                     }
                     Text(
-                        text = order.status,
+                        text = if (isVerified) "ভেরিফাইড" else "অপেক্ষমান",
                         style = MaterialTheme.typography.labelSmall,
                         color = statusColor,
                         fontWeight = FontWeight.Bold
@@ -475,25 +452,27 @@ private fun UserRecordCard(user: UserEntity) {
         ) {
             Column {
                 Text(
-                    text = "${user.name} (${user.userId})",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "সেন্ডার: ${user.phone}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Mobile: ${user.phone} • ${user.email}",
+                    text = user.name,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "৳${String.format(Locale.US, "%,.2f", user.totalVerifiedAmount)}",
+                    text = "৳${String.format(Locale.US, "%,.0f", user.totalVerifiedAmount)}",
                     style = MaterialTheme.typography.titleMedium,
                     color = ElectricEmerald,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${user.verifiedOrdersCount} verified orders",
+                    text = "${user.verifiedOrdersCount} বার পেমেন্ট করেছে",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

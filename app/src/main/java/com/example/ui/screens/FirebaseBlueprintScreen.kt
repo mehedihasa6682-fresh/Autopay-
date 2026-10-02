@@ -82,12 +82,12 @@ fun FirebaseBlueprintScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Firebase Cloud Functions & Realtime DB Code",
+                            text = "আপনার ওয়েবসাইটে বসানোর রেডি কোড",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Production-ready Node.js Cloud Functions, atomic Realtime Database locks, and schema rules for 20+ simultaneous MFS checkouts.",
+                            text = "আপনার ওয়েবসাইট PHP/WordPress হোক বা Firebase — নিচের কোড কপি করে বসালেই অ্যাপের সাথে কানেক্ট হয়ে যাবে।",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                         )
@@ -102,7 +102,7 @@ fun FirebaseBlueprintScreen(
                 onCopy = {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                     clipboard?.setPrimaryClip(ClipData.newPlainText(section.fileName, section.code))
-                    onCodeCopied("Copied ${section.fileName} to clipboard!")
+                    onCodeCopied("${section.fileName} কোড কপি করা হয়েছে!")
                 },
                 onShare = {
                     runCatching {
@@ -111,7 +111,7 @@ fun FirebaseBlueprintScreen(
                             putExtra(Intent.EXTRA_SUBJECT, section.fileName)
                             putExtra(Intent.EXTRA_TEXT, section.code)
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Share ${section.fileName}"))
+                        context.startActivity(Intent.createChooser(sendIntent, "শেয়ার করুন ${section.fileName}"))
                     }
                 }
             )
@@ -133,23 +133,16 @@ private fun BlueprintCodeCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = section.subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = section.subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -179,7 +172,7 @@ private fun BlueprintCodeCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Copy Code")
+                        Text("কোড কপি করুন")
                     }
 
                     OutlinedButton(

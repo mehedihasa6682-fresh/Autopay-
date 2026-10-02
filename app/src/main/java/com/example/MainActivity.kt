@@ -327,6 +327,7 @@ fun PaySyncMfsApp(
                             config = config,
                             webhookLogs = webhookLogs,
                             onSaveConfig = viewModel::saveConfig,
+                            onTestWebsiteWebhook = viewModel::testWebsiteWebhook,
                             onClearLogs = viewModel::clearWebhookLogs
                         )
 

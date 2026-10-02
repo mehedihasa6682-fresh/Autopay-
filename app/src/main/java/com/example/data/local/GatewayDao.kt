@@ -67,6 +67,9 @@ interface GatewayDao {
     @Query("SELECT * FROM unmatched_transactions ORDER BY receivedAt DESC")
     fun observeUnmatchedTransactions(): Flow<List<UnmatchedTransactionEntity>>
 
+    @Query("SELECT * FROM unmatched_transactions WHERE status = 'UNCLAIMED' ORDER BY receivedAt DESC")
+    suspend fun getUnclaimedTransactions(): List<UnmatchedTransactionEntity>
+
     @Query("SELECT * FROM unmatched_transactions WHERE trxId = :trxId LIMIT 1")
     suspend fun getUnmatchedByTrxId(trxId: String): UnmatchedTransactionEntity?
 

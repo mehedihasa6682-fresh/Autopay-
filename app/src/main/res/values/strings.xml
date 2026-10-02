@@ -1,13 +1,13 @@
 <resources>
     <string name="app_name">PaySync MFS</string>
-    <string name="gateway_subtitle">bKash &amp; Nagad 24/7 Payment Verification Engine</string>
-    <string name="nav_gateway">Gateway</string>
-    <string name="nav_sessions">Sessions</string>
-    <string name="nav_unmatched">Unmatched</string>
-    <string name="nav_webhooks">Webhooks</string>
-    <string name="nav_blueprint">Firebase Code</string>
+    <string name="gateway_subtitle">সেন্ডার নাম্বার দেখে অটো bKash ও Nagad পেমেন্ট ভেরিফাই</string>
+    <string name="nav_gateway">হোম</string>
+    <string name="nav_sessions">সেন্ডার লিস্ট</string>
+    <string name="nav_unmatched">ম্যানুয়াল চেক</string>
+    <string name="nav_webhooks">ওয়েবসাইট API</string>
+    <string name="nav_blueprint">ওয়েবসাইট কোড</string>
     <string name="service_notification_channel_name">MFS 24/7 Gateway Listener</string>
-    <string name="service_notification_title">PaySync MFS Gateway Active (24/7)</string>
-    <string name="service_notification_content">Listening for bKash &amp; Nagad SMS/Notifications &amp; syncing with Firebase Webhook</string>
+    <string name="service_notification_title">PaySync MFS অটো ভেরিফাই চালু আছে (24/7)</string>
+    <string name="service_notification_content">bKash ও Nagad এসএমএস আসলে সেন্ডার নাম্বার দেখে অটো ভেরিফাই হবে</string>
     <string name="hero_banner_desc">MFS Payment Automation Command Center Banner</string>
 </resources>

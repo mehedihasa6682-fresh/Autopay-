@@ -14,24 +14,28 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mfs_gateway_prefs")
 
 enum class DynamicAmountMode(val label: String, val description: String) {
+    SENDER_NUMBER_ONLY(
+        label = "শুধু সেন্ডার নাম্বার দিয়ে ভেরিফাই (Exact Amount)",
+        description = "কাস্টমার সাইটে শুধু নিজের নাম্বার দেবে, অ্যাপ সেন্ডার নাম্বার ও টাকার পরিমাণ মিলিয়ে ভেরিফাই করবে"
+    ),
     INCREMENTAL_TAKA(
-        label = "Incremental Taka (+৳1.00, +৳2.00)",
-        description = "Base ৳500 -> ৳501.00, ৳502.00 ... up to +৳40.00 per active 5-min window"
+        label = "ডাইনামিক টাকা (+৳1, +৳2)",
+        description = "একই সময়ে অনেকে পাঠালে ৳501, ৳502 হিসেবে আলাদা করবে"
     ),
     FRACTIONAL_PAISA(
-        label = "Fractional Paisa (+৳0.01 .. +৳0.99)",
-        description = "Base ৳500 -> ৳500.01, ৳500.02 ... up to +৳0.99 per active 5-min window"
+        label = "ডাইনামিক পয়সা (+৳0.01, +৳0.02)",
+        description = "একই সময়ে অনেকে পাঠালে ৳500.01, ৳500.02 হিসেবে আলাদা করবে"
     )
 }
 
 data class GatewayConfig(
-    val webhookUrl: String = "https://asia-southeast1-mfs-paysync.cloudfunctions.net/smsWebhookReceiver",
+    val webhookUrl: String = "https://yourwebsite.com/api/mfs-webhook.php",
     val firebaseRealtimeDbUrl: String = "https://mfs-paysync-default-rtdb.asia-southeast1.firebasedatabase.app",
     val secretKey: String = "whsec_live_bd_mfs_89a7c4e21f09",
     val merchantBkashNumber: String = "01711987654",
     val merchantNagadNumber: String = "01819876543",
-    val dynamicAmountMode: DynamicAmountMode = DynamicAmountMode.INCREMENTAL_TAKA,
-    val sessionTtlMinutes: Int = 5,
+    val dynamicAmountMode: DynamicAmountMode = DynamicAmountMode.SENDER_NUMBER_ONLY,
+    val sessionTtlMinutes: Int = 15,
     val isBackgroundServiceEnabled: Boolean = true,
     val syncToFirebaseRest: Boolean = false
 )
@@ -51,20 +55,20 @@ class GatewayPreferences(private val context: Context) {
     }
 
     val configFlow: Flow<GatewayConfig> = context.dataStore.data.map { prefs ->
-        val modeStr = prefs[KEY_DYNAMIC_MODE] ?: DynamicAmountMode.INCREMENTAL_TAKA.name
+        val modeStr = prefs[KEY_DYNAMIC_MODE] ?: DynamicAmountMode.SENDER_NUMBER_ONLY.name
         val mode = runCatching { DynamicAmountMode.valueOf(modeStr) }
-            .getOrDefault(DynamicAmountMode.INCREMENTAL_TAKA)
+            .getOrDefault(DynamicAmountMode.SENDER_NUMBER_ONLY)
 
         GatewayConfig(
             webhookUrl = prefs[KEY_WEBHOOK_URL]
-                ?: "https://asia-southeast1-mfs-paysync.cloudfunctions.net/smsWebhookReceiver",
+                ?: "https://yourwebsite.com/api/mfs-webhook.php",
             firebaseRealtimeDbUrl = prefs[KEY_FIREBASE_DB_URL]
                 ?: "https://mfs-paysync-default-rtdb.asia-southeast1.firebasedatabase.app",
             secretKey = prefs[KEY_SECRET_KEY] ?: "whsec_live_bd_mfs_89a7c4e21f09",
             merchantBkashNumber = prefs[KEY_BKASH_NUMBER] ?: "01711987654",
             merchantNagadNumber = prefs[KEY_NAGAD_NUMBER] ?: "01819876543",
             dynamicAmountMode = mode,
-            sessionTtlMinutes = prefs[KEY_SESSION_TTL] ?: 5,
+            sessionTtlMinutes = prefs[KEY_SESSION_TTL] ?: 15,
             isBackgroundServiceEnabled = prefs[KEY_BG_SERVICE] ?: true,
             syncToFirebaseRest = prefs[KEY_SYNC_FIREBASE] ?: false
         )
@@ -87,7 +91,7 @@ class GatewayPreferences(private val context: Context) {
             prefs[KEY_BKASH_NUMBER] = merchantBkashNumber.trim()
             prefs[KEY_NAGAD_NUMBER] = merchantNagadNumber.trim()
             prefs[KEY_DYNAMIC_MODE] = dynamicAmountMode.name
-            prefs[KEY_SESSION_TTL] = sessionTtlMinutes.coerceIn(1, 30)
+            prefs[KEY_SESSION_TTL] = sessionTtlMinutes.coerceIn(1, 60)
             prefs[KEY_SYNC_FIREBASE] = syncToFirebaseRest
         }
     }

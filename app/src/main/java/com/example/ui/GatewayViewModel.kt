@@ -91,7 +91,6 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
             MfsGatewayForegroundService.startGatewayService(getApplication())
             refreshPermissionStatuses()
         }
-        // 1-second ticker for real-time 5-minute session countdown timers & expiry sweeping
         viewModelScope.launch {
             var tickCounter = 0
             while (isActive) {
@@ -122,10 +121,10 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
             repo.preferences.setBackgroundServiceEnabled(enable)
             if (enable) {
                 MfsGatewayForegroundService.startGatewayService(ctx)
-                showBanner("24/7 Foreground MFS Listener Service started.")
+                showBanner("২৪/৭ অটো এসএমএস ভেরিফিকেশন সার্ভিস চালু হয়েছে।")
             } else {
                 MfsGatewayForegroundService.stopGatewayService(ctx)
-                showBanner("Foreground MFS Listener Service paused.")
+                showBanner("অটো ভেরিফিকেশন সার্ভিস সাময়িকভাবে বন্ধ করা হয়েছে।")
             }
             refreshPermissionStatuses()
         }
@@ -140,21 +139,21 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
             when (val outcome = repo.processIncomingSmsOrNotification(sender, smsBody)) {
                 is VerificationOutcome.Verified -> {
                     showBanner(
-                        "VERIFIED! ${outcome.mfsProvider} TrxID ${outcome.trxId} (৳${outcome.amount}) matched Order ${outcome.orderId} (${outcome.customerName})"
+                        "ভেরিফাইড! সেন্ডার নাম্বার ${outcome.senderNumber} থেকে ৳${outcome.amount} (${outcome.mfsProvider}) মিলেছে! অর্ডার: ${outcome.orderId}"
                     )
                 }
                 is VerificationOutcome.QueuedUnmatched -> {
                     showBanner(
-                        "QUEUED IN UNMATCHED: ${outcome.mfsProvider} TrxID ${outcome.trxId} (৳${outcome.amount}) — ${outcome.reason}"
+                        "এসএমএস রিসিভ হয়েছে (সেন্ডার: ${outcome.senderNumber}, ৳${outcome.amount}) — ওয়েবসাইটে পাঠানো হয়েছে এবং ম্যানুয়াল লিস্টে যোগ হয়েছে।"
                     )
                 }
                 is VerificationOutcome.DuplicateBlocked -> {
                     showBanner(
-                        "DOUBLE-SPEND BLOCKED: TrxID ${outcome.trxId} was already processed (${outcome.originalOutcome})!"
+                        "সতর্কতা: এই TrxID (${outcome.trxId}) আগেই ব্যবহার করা হয়েছে! ডুপ্লিকেট ব্লক করা হয়েছে।"
                     )
                 }
                 is VerificationOutcome.IgnoredNonMfs -> {
-                    showBanner("Ignored: ${outcome.reason}")
+                    showBanner(outcome.reason)
                 }
             }
         }
@@ -167,30 +166,36 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
         mfsProvider: String
     ) {
         viewModelScope.launch {
+            if (customerPhone.trim().length < 10) {
+                showBanner("সঠিক ১১ ডিজিটের সেন্ডার মোবাইল নাম্বার দিন (যেমন: 01712345678)")
+                return@launch
+            }
             val session = repo.initiatePaymentSession(
                 customerName = customerName,
                 customerPhone = customerPhone,
                 baseAmount = baseAmount,
                 mfsProvider = mfsProvider
             )
-            showBanner(
-                "Session Locked: Send ৳${String.format("%.2f", session.lockedAmount)} via ${session.mfsProvider} within 5:00 mins (Order ${session.orderId})"
-            )
+            if (session.status == "MATCHED") {
+                showBanner(
+                    "সাথে সাথে ভেরিফাইড! ${session.customerPhone} নাম্বার থেকে আগেই ৳${session.lockedAmount} এসেছিল (TrxID: ${session.matchedTrxId})"
+                )
+            } else {
+                showBanner(
+                    "সেন্ডার নাম্বার (${session.customerPhone}) যুক্ত হয়েছে! এখন এই নাম্বার থেকে ৳${String.format("%.0f", session.lockedAmount)} আসলে অটো ভেরিফাই হবে।"
+                )
+            }
         }
     }
 
     fun spawn20ConcurrentSessions(baseAmount: Double, mfsProvider: String) {
         viewModelScope.launch {
-            val created = repo.spawnConcurrentSessionsBurst(
-                count = 20,
+            repo.spawnConcurrentSessionsBurst(
+                count = 10,
                 baseAmount = baseAmount,
                 mfsProvider = mfsProvider
             )
-            val minAmt = created.minOfOrNull { it.lockedAmount } ?: baseAmount
-            val maxAmt = created.maxOfOrNull { it.lockedAmount } ?: baseAmount
-            showBanner(
-                "20 Concurrent Sessions Locked! Unique amounts ৳${String.format("%.2f", minAmt)} .. ৳${String.format("%.2f", maxAmt)} assigned with 0 collisions."
-            )
+            showBanner("১০টি টেস্ট সেন্ডার নাম্বার একসাথে যুক্ত করা হয়েছে!")
         }
     }
 
@@ -214,15 +219,26 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
 
     fun claimManualTrx(orderId: String, trxId: String, senderPhone: String) {
         viewModelScope.launch {
-            when (val res = repo.claimUnmatchedTransaction(orderId, trxId, senderPhone)) {
+            when (val res = repo.verifyBySenderNumberOrTrx(senderPhone, orderId, trxId)) {
                 is ManualClaimResult.Success -> {
                     showBanner(
-                        "MANUAL CLAIM VERIFIED! Order ${res.orderId} linked to ${res.mfsProvider} TrxID ${res.trxId} (৳${res.amount})"
+                        "ভেরিফাইড! সেন্ডার নাম্বার ${res.senderNumber} (৳${res.amount}, TrxID: ${res.trxId}) সফলভাবে ভেরিফাই হয়েছে!"
                     )
                 }
                 is ManualClaimResult.Error -> {
-                    showBanner("Claim Rejected: ${res.message}")
+                    showBanner(res.message)
                 }
+            }
+        }
+    }
+
+    fun testWebsiteWebhook() {
+        viewModelScope.launch {
+            val res = repo.sendTestWebhookPing()
+            if (res.isSuccess) {
+                showBanner("ওয়েবসাইট টেস্ট সফল! (${res.responseSummary})")
+            } else {
+                showBanner("ওয়েবসাইট কানেকশন ত্রুটি: ${res.responseSummary}")
             }
         }
     }
@@ -230,7 +246,7 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
     fun scanDeviceSmsInbox() {
         viewModelScope.launch {
             val count = repo.scanDeviceSmsInbox()
-            showBanner("Scanned Device SMS Inbox: Processed $count new bKash/Nagad transaction(s).")
+            showBanner("ফোনের SMS ইনবক্স চেক সম্পন্ন: $count টি নতুন পেমেন্ট পাওয়া গেছে।")
         }
     }
 
@@ -255,14 +271,14 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
                 sessionTtlMinutes = ttlMinutes,
                 syncToFirebaseRest = syncToFirebaseRest
             )
-            showBanner("Gateway & Firebase Webhook configuration saved.")
+            showBanner("ওয়েবসাইট Webhook URL এবং সেটিংস সেভ করা হয়েছে!")
         }
     }
 
     fun clearWebhookLogs() {
         viewModelScope.launch {
             repo.clearWebhookLogs()
-            showBanner("Webhook logs cleared.")
+            showBanner("লগ ক্লিয়ার করা হয়েছে।")
         }
     }
 
